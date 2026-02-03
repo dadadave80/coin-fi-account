@@ -1,2 +1,5 @@
+@coinfi-account/=src/
+@coinfi-account-lib/=src/libraries/
+@coinfi-account-diamond/=src/libraries/diamond/
 forge-std/=lib/forge-std/src/
 solady/=lib/solady/src/
