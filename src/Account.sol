@@ -8,7 +8,7 @@ import {Receiver} from "solady/accounts/Receiver.sol";
 error Unauthorized();
 
 /// @title Account
-/// @notice EIP-7702 Account contract, utilizing ERC-2535 Diamond Standard for upgradability and modularity.
+/// @notice EIP-7702 Account contract, utilizing ERC-2535 Diamond Standard for modularity.
 /// @author David Dada <daveproxy80@gmail.com> (https://github.com/dadadave80)
 contract Account is Diamond, Receiver {
     /// @dev Modifier to ensure the function is called by the account contract itself.
