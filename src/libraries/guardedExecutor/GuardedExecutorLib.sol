@@ -71,12 +71,7 @@ event CanExecuteSet(bytes32 keyHash, address target, bytes4 fnSel, bool can);
 event CallCheckerSet(bytes32 keyHash, address target, address checker);
 
 /// @dev Emitted when a spend limit is set.
-event SpendLimitSet(
-    bytes32 keyHash,
-    address token,
-    SpendPeriod period,
-    uint256 limit
-);
+event SpendLimitSet(bytes32 keyHash, address token, SpendPeriod period, uint256 limit);
 
 /// @dev Emitted when a spend limit is removed.
 event SpendLimitRemoved(bytes32 keyHash, address token, SpendPeriod period);
@@ -189,15 +184,9 @@ library GuardedExecutorLib {
     using EnumerableMapLib for *;
 
     /// @dev Returns the storage pointer.
-    function getGuardedExecutorKeyStorage(
-        bytes32 keyHash
-    ) internal view returns (GuardedExecutorKeyStorage storage $) {
-        bytes32 seed = keyHash == ANY_KEYHASH
-            ? ANY_KEYHASH
-            : _getGuardedExecutorKeyStorageSeed(keyHash);
-        uint256 namespaceHash = uint72(
-            bytes9(keccak256("ITHACA_GUARDED_EXECUTOR_KEY_STORAGE"))
-        );
+    function getGuardedExecutorKeyStorage(bytes32 keyHash) internal view returns (GuardedExecutorKeyStorage storage $) {
+        bytes32 seed = keyHash == ANY_KEYHASH ? ANY_KEYHASH : _getGuardedExecutorKeyStorageSeed(keyHash);
+        uint256 namespaceHash = uint72(bytes9(keccak256("ITHACA_GUARDED_EXECUTOR_KEY_STORAGE")));
         assembly ("memory-safe") {
             // Non-standard hashing scheme to reduce chance of conflict with regular Solidity.
             mstore(0x09, namespaceHash)
@@ -235,8 +224,7 @@ library GuardedExecutorLib {
             return LibERC7821.execute(calls, keyHash);
         }
 
-        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash)
-            .spends;
+        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash).spends;
         _ExecuteTemps memory t;
 
         // Collect all ERC20 tokens that need to be guarded,
@@ -257,8 +245,7 @@ library GuardedExecutorLib {
         // to guard, as anyone else can directly submit the calldata and the signature.
         uint256 totalNativeSpend;
         for (uint256 i; i < calls.length; ++i) {
-            (address target, uint256 value, bytes calldata data) = LibERC7821
-                .get(calls, i);
+            (address target, uint256 value, bytes calldata data) = LibERC7821.get(calls, i);
             if (value != 0) totalNativeSpend += value;
             if (data.length < 4) continue;
             uint32 fnSel = uint32(bytes4(LibBytes.loadCalldata(data, 0x00)));
@@ -272,10 +259,7 @@ library GuardedExecutorLib {
             // to transfer to an account that is not `address(this)`, treat it as outflow.
             if (fnSel == 0x23b872dd) {
                 // `transferFrom(address from, address to, uint256 amount)`.
-                if (
-                    LibBytes.loadCalldata(data, 0x24).lsbToAddress() ==
-                    address(this)
-                ) continue;
+                if (LibBytes.loadCalldata(data, 0x24).lsbToAddress() == address(this)) continue;
                 if (LibBytes.loadCalldata(data, 0x44) == 0) continue; // `amount == 0`.
                 t.erc20s.p(target);
                 t.transferAmounts.p(LibBytes.loadCalldata(data, 0x44)); // `amount`.
@@ -286,9 +270,7 @@ library GuardedExecutorLib {
             if (fnSel == 0x095ea7b3) {
                 if (LibBytes.loadCalldata(data, 0x24) == 0) continue; // `amount == 0`.
                 t.approvedERC20s.p(target);
-                t.approvalSpenders.p(
-                    LibBytes.loadCalldata(data, 0x04).lsbToAddress()
-                ); // `spender`.
+                t.approvalSpenders.p(LibBytes.loadCalldata(data, 0x04).lsbToAddress()); // `spender`.
                 t.erc20s.p(target); // `token`.
                 t.transferAmounts.p(LibBytes.loadCalldata(data, 0x24)); // `amount`.
             }
@@ -299,12 +281,8 @@ library GuardedExecutorLib {
             if (fnSel == 0x87517c45) {
                 if (target != _PERMIT2) continue;
                 if (LibBytes.loadCalldata(data, 0x44) == 0) continue; // `amount == 0`.
-                t.permit2ERC20s.p(
-                    LibBytes.loadCalldata(data, 0x04).lsbToAddress()
-                ); // `token`.
-                t.permit2Spenders.p(
-                    LibBytes.loadCalldata(data, 0x24).lsbToAddress()
-                ); // `spender`.
+                t.permit2ERC20s.p(LibBytes.loadCalldata(data, 0x04).lsbToAddress()); // `token`.
+                t.permit2Spenders.p(LibBytes.loadCalldata(data, 0x24).lsbToAddress()); // `spender`.
                 t.erc20s.p(LibBytes.loadCalldata(data, 0x04).lsbToAddress()); // `token`.
                 t.transferAmounts.p(LibBytes.loadCalldata(data, 0x44)); // `amount`.
             }
@@ -314,15 +292,10 @@ library GuardedExecutorLib {
         LibSort.groupSum(t.erc20s.data, t.transferAmounts.data);
 
         // Collect the ERC20 balances before the batch execution.
-        uint256[] memory balancesBefore = DynamicArrayLib.malloc(
-            t.erc20s.length()
-        );
+        uint256[] memory balancesBefore = DynamicArrayLib.malloc(t.erc20s.length());
         for (uint256 i; i < t.erc20s.length(); ++i) {
             address token = t.erc20s.getAddress(i);
-            balancesBefore.set(
-                i,
-                SafeTransferLib.balanceOf(token, address(this))
-            );
+            balancesBefore.set(i, SafeTransferLib.balanceOf(token, address(this)));
         }
 
         // Perform the batch execution.
@@ -337,20 +310,13 @@ library GuardedExecutorLib {
         // approvals are revoked. This is to prevent sidestepping the guard.
         for (uint256 i; i < t.approvedERC20s.length(); ++i) {
             address token = t.approvedERC20s.getAddress(i);
-            SafeTransferLib.safeApprove(
-                token,
-                t.approvalSpenders.getAddress(i),
-                0
-            );
+            SafeTransferLib.safeApprove(token, t.approvalSpenders.getAddress(i), 0);
         }
 
         // Revoke all non-zero Permit2 direct approvals that have been made.
         for (uint256 i; i < t.permit2ERC20s.length(); ++i) {
             address token = t.permit2ERC20s.getAddress(i);
-            SafeTransferLib.permit2Lockdown(
-                token,
-                t.permit2Spenders.getAddress(i)
-            );
+            SafeTransferLib.permit2Lockdown(token, t.permit2Spenders.getAddress(i));
         }
 
         // Increments the spent amounts.
@@ -368,10 +334,7 @@ library GuardedExecutorLib {
                 // and we want to be as conservative as possible.
                 Math.max(
                     t.transferAmounts.get(i),
-                    Math.saturatingSub(
-                        balancesBefore.get(i),
-                        SafeTransferLib.balanceOf(token, address(this))
-                    )
+                    Math.saturatingSub(balancesBefore.get(i), SafeTransferLib.balanceOf(token, address(this)))
                 )
             );
         }
@@ -379,12 +342,7 @@ library GuardedExecutorLib {
 
     /// @dev Override to add a check on `keyHash`.
     /// Note: Called internally in ERC7821, which coalesce zero-address `target`s to `address(this)`.
-    function execute(
-        address target,
-        uint256 value,
-        bytes calldata data,
-        bytes32 keyHash
-    ) internal {
+    function execute(address target, uint256 value, bytes calldata data, bytes32 keyHash) internal {
         if (!canExecute(keyHash, target, data)) {
             revert UnauthorizedCall(keyHash, target, data);
         }
@@ -397,12 +355,11 @@ library GuardedExecutorLib {
 
     /// @dev Sets the ability of a key hash to execute a call with a function selector.
     /// Note: Does NOT coalesce a zero-address `target` to `address(this)`.
-    function setCanExecute(
-        bytes32 keyHash,
-        address target,
-        bytes4 fnSel,
-        bool can
-    ) internal onlyThis checkKeyHashIsNonZero(keyHash) {
+    function setCanExecute(bytes32 keyHash, address target, bytes4 fnSel, bool can)
+        internal
+        onlyThis
+        checkKeyHashIsNonZero(keyHash)
+    {
         if (keyHash != ANY_KEYHASH) {
             if (_isSuperAdmin(keyHash)) revert SuperAdminCanExecuteEverything();
         }
@@ -415,11 +372,7 @@ library GuardedExecutorLib {
         if (isSelfExecute(target, fnSel)) revert CannotSelfExecute();
 
         // Impose a max capacity of 2048 for set enumeration, which should be more than enough.
-        getGuardedExecutorKeyStorage(keyHash).canExecute.update(
-            packCanExecute(target, fnSel),
-            can,
-            2048
-        );
+        getGuardedExecutorKeyStorage(keyHash).canExecute.update(packCanExecute(target, fnSel), can, 2048);
         emit CanExecuteSet(keyHash, target, fnSel, can);
     }
 
@@ -428,11 +381,11 @@ library GuardedExecutorLib {
     /// By setting `checker` to `address(0)`, it removes the it from the list of
     /// call checkers on this account.
     /// The `ANY_KEYHASH` and `ANY_TARGET` wildcards apply here too.
-    function setCallChecker(
-        bytes32 keyHash,
-        address target,
-        address checker
-    ) internal onlyThis checkKeyHashIsNonZero(keyHash) {
+    function setCallChecker(bytes32 keyHash, address target, address checker)
+        internal
+        onlyThis
+        checkKeyHashIsNonZero(keyHash)
+    {
         if (keyHash != ANY_KEYHASH) {
             if (_isSuperAdmin(keyHash)) revert SuperAdminCanSpendAnything();
         }
@@ -440,9 +393,7 @@ library GuardedExecutorLib {
         // It is ok even if we don't check for `_isSelfExecute` here, as we will still
         // check it in `canExecute` before any custom call checker.
 
-        EnumerableMapLib.AddressToAddressMap
-            storage checkers = getGuardedExecutorKeyStorage(keyHash)
-                .callCheckers;
+        EnumerableMapLib.AddressToAddressMap storage checkers = getGuardedExecutorKeyStorage(keyHash).callCheckers;
 
         // Impose a max capacity of 2048 for map enumeration, which should be more than enough.
         checkers.update(target, checker, checker != address(0), 2048);
@@ -451,16 +402,14 @@ library GuardedExecutorLib {
     }
 
     /// @dev Sets the spend limit of `token` for `keyHash` for `period`.
-    function setSpendLimit(
-        bytes32 keyHash,
-        address token,
-        SpendPeriod period,
-        uint256 limit
-    ) internal onlyThis checkKeyHashIsNonZero(keyHash) {
+    function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit)
+        internal
+        onlyThis
+        checkKeyHashIsNonZero(keyHash)
+    {
         if (_isSuperAdmin(keyHash)) revert SuperAdminCanSpendAnything();
 
-        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash)
-            .spends;
+        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash).spends;
         spends.tokens.add(token, 64); // Max capacity of 64.
 
         TokenSpendStorage storage tokenSpends = spends.spends[token];
@@ -475,15 +424,14 @@ library GuardedExecutorLib {
     }
 
     /// @dev Removes the spend limit of `token` for `keyHash` for `period`.
-    function removeSpendLimit(
-        bytes32 keyHash,
-        address token,
-        SpendPeriod period
-    ) internal onlyThis checkKeyHashIsNonZero(keyHash) {
+    function removeSpendLimit(bytes32 keyHash, address token, SpendPeriod period)
+        internal
+        onlyThis
+        checkKeyHashIsNonZero(keyHash)
+    {
         if (_isSuperAdmin(keyHash)) revert SuperAdminCanSpendAnything();
 
-        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash)
-            .spends;
+        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash).spends;
 
         TokenSpendStorage storage tokenSpends = spends.spends[token];
         if (tokenSpends.periods.remove(uint8(period))) {
@@ -503,11 +451,7 @@ library GuardedExecutorLib {
 
     /// @dev Returns whether a key hash can execute a call.
     /// Note: Does NOT coalesce a zero-address `target` to `address(this)`.
-    function canExecute(
-        bytes32 keyHash,
-        address target,
-        bytes calldata data
-    ) internal view returns (bool) {
+    function canExecute(bytes32 keyHash, address target, bytes calldata data) internal view returns (bool) {
         // A zero `keyHash` represents that the execution is authorized / performed
         // by the EOA's secp256k1 key itself.
         if (keyHash == bytes32(0)) return true;
@@ -528,9 +472,7 @@ library GuardedExecutorLib {
         // or any target will still NOT allow for self execution.
         if (isSelfExecute(target, fnSel)) return false;
 
-        EnumerableSetLib.Bytes32Set storage c = getGuardedExecutorKeyStorage(
-            keyHash
-        ).canExecute;
+        EnumerableSetLib.Bytes32Set storage c = getGuardedExecutorKeyStorage(keyHash).canExecute;
         if (c.length() != 0) {
             if (c.contains(packCanExecute(target, fnSel))) return true;
             if (c.contains(packCanExecute(target, ANY_FN_SEL))) return true;
@@ -561,18 +503,13 @@ library GuardedExecutorLib {
     /// @dev Returns an array of packed (`target`, `fnSel`) that `keyHash` is authorized to execute on.
     /// - `target` is in the upper 20 bytes.
     /// - `fnSel` is in the lower 4 bytes.
-    function canExecutePackedInfos(
-        bytes32 keyHash
-    ) internal view returns (bytes32[] memory) {
+    function canExecutePackedInfos(bytes32 keyHash) internal view returns (bytes32[] memory) {
         return getGuardedExecutorKeyStorage(keyHash).canExecute.values();
     }
 
     /// @dev Returns an array containing information on all the spends for `keyHash`.
-    function spendInfos(
-        bytes32 keyHash
-    ) internal view returns (SpendInfo[] memory results) {
-        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash)
-            .spends;
+    function spendInfos(bytes32 keyHash) internal view returns (SpendInfo[] memory results) {
+        SpendStorage storage spends = getGuardedExecutorKeyStorage(keyHash).spends;
         DynamicArrayLib.DynamicArray memory a;
         uint256 n = spends.tokens.length();
         for (uint256 i; i < n; ++i) {
@@ -581,24 +518,15 @@ library GuardedExecutorLib {
             uint8[] memory periods = tokenSpends.periods.values();
             for (uint256 j; j < periods.length; ++j) {
                 uint8 period = periods[j];
-                TokenPeriodSpend memory tokenPeriodSpend = loadSpend(
-                    tokenSpends.spends[period]
-                );
+                TokenPeriodSpend memory tokenPeriodSpend = loadSpend(tokenSpends.spends[period]);
                 SpendInfo memory info;
                 info.period = SpendPeriod(period);
                 info.token = token;
                 info.limit = tokenPeriodSpend.limit;
                 info.lastUpdated = tokenPeriodSpend.lastUpdated;
                 info.spent = tokenPeriodSpend.spent;
-                info.current = startOfSpendPeriod(
-                    block.timestamp,
-                    SpendPeriod(period)
-                );
-                info.currentSpent = Math.ternary(
-                    info.lastUpdated < info.current,
-                    0,
-                    info.spent
-                );
+                info.current = startOfSpendPeriod(block.timestamp, SpendPeriod(period));
+                info.currentSpent = Math.ternary(info.lastUpdated < info.current, 0, info.spent);
                 uint256 pointer;
                 assembly ("memory-safe") {
                     pointer := info // Use assembly to reinterpret cast.
@@ -612,12 +540,8 @@ library GuardedExecutorLib {
     }
 
     /// @dev Returns the list of call checker infos.
-    function callCheckerInfos(
-        bytes32 keyHash
-    ) internal view returns (CallCheckerInfo[] memory results) {
-        EnumerableMapLib.AddressToAddressMap
-            storage checkers = getGuardedExecutorKeyStorage(keyHash)
-                .callCheckers;
+    function callCheckerInfos(bytes32 keyHash) internal view returns (CallCheckerInfo[] memory results) {
+        EnumerableMapLib.AddressToAddressMap storage checkers = getGuardedExecutorKeyStorage(keyHash).callCheckers;
         results = new CallCheckerInfo[](checkers.length());
         for (uint256 i; i < results.length; ++i) {
             (results[i].target, results[i].checker) = checkers.at(i);
@@ -625,9 +549,7 @@ library GuardedExecutorLib {
     }
 
     /// @dev Returns spend and execute infos for each provided key hash in the same order.
-    function spendAndExecuteInfos(
-        bytes32[] calldata keyHashes
-    )
+    function spendAndExecuteInfos(bytes32[] calldata keyHashes)
         internal
         view
         returns (SpendInfo[][] memory spends, bytes32[][] memory executes)
@@ -643,10 +565,7 @@ library GuardedExecutorLib {
     }
 
     /// @dev Rounds the unix timestamp down to the period.
-    function startOfSpendPeriod(
-        uint256 unixTimestamp,
-        SpendPeriod period
-    ) internal pure returns (uint256) {
+    function startOfSpendPeriod(uint256 unixTimestamp, SpendPeriod period) internal pure returns (uint256) {
         if (period == SpendPeriod.Minute) {
             return Math.rawMul(Math.rawDiv(unixTimestamp, 60), 60);
         }
@@ -659,9 +578,7 @@ library GuardedExecutorLib {
         if (period == SpendPeriod.Week) {
             return DateTimeLib.mondayTimestamp(unixTimestamp);
         }
-        (uint256 year, uint256 month, ) = DateTimeLib.timestampToDate(
-            unixTimestamp
-        );
+        (uint256 year, uint256 month,) = DateTimeLib.timestampToDate(unixTimestamp);
         // Note: DateTimeLib's months and month-days start from 1.
         if (period == SpendPeriod.Month) {
             return DateTimeLib.dateToTimestamp(year, month, 1);
@@ -678,16 +595,12 @@ library GuardedExecutorLib {
     ////////////////////////////////////////////////////////////////////////
 
     /// @dev Returns if the call can be executed via consulting a 3rd party checker.
-    function checkCall(
-        bytes32 forKeyHash,
-        bytes32 keyHash,
-        address forTarget,
-        address target,
-        bytes calldata data
-    ) internal view returns (bool) {
-        (bool exists, address checker) = getGuardedExecutorKeyStorage(
-            forKeyHash
-        ).callCheckers.tryGet(forTarget);
+    function checkCall(bytes32 forKeyHash, bytes32 keyHash, address forTarget, address target, bytes calldata data)
+        internal
+        view
+        returns (bool)
+    {
+        (bool exists, address checker) = getGuardedExecutorKeyStorage(forKeyHash).callCheckers.tryGet(forTarget);
         if (exists) {
             return ICallChecker(checker).canExecute(keyHash, target, data);
         }
@@ -695,33 +608,19 @@ library GuardedExecutorLib {
     }
 
     /// @dev Returns whether the call is a self execute.
-    function isSelfExecute(
-        address target,
-        bytes4 fnSel
-    ) internal view returns (bool) {
-        return
-            LibBit.and(
-                target == address(this),
-                fnSel == ERC7821.execute.selector
-            );
+    function isSelfExecute(address target, bytes4 fnSel) internal view returns (bool) {
+        return LibBit.and(target == address(this), fnSel == ERC7821.execute.selector);
     }
 
     /// @dev Returns a bytes32 value that contains `target` and `fnSel`.
-    function packCanExecute(
-        address target,
-        bytes4 fnSel
-    ) internal pure returns (bytes32 result) {
+    function packCanExecute(address target, bytes4 fnSel) internal pure returns (bytes32 result) {
         assembly ("memory-safe") {
             result := or(shl(96, target), shr(224, fnSel))
         }
     }
 
     /// @dev Increments the amount spent.
-    function incrementSpent(
-        TokenSpendStorage storage s,
-        address token,
-        uint256 amount
-    ) internal {
+    function incrementSpent(TokenSpendStorage storage s, address token, uint256 amount) internal {
         if (amount == uint256(0)) return; // Early return.
         uint8[] memory periods = s.periods.values();
         if (periods.length == 0) revert NoSpendPermissions();
@@ -729,10 +628,7 @@ library GuardedExecutorLib {
             uint8 period = periods[i];
             LibBytes.BytesStorage storage $ = s.spends[period];
             TokenPeriodSpend memory tokenPeriodSpend = loadSpend($);
-            uint256 current = startOfSpendPeriod(
-                block.timestamp,
-                SpendPeriod(period)
-            );
+            uint256 current = startOfSpendPeriod(block.timestamp, SpendPeriod(period));
             if (tokenPeriodSpend.lastUpdated < current) {
                 tokenPeriodSpend.lastUpdated = current;
                 tokenPeriodSpend.spent = 0;
@@ -745,17 +641,12 @@ library GuardedExecutorLib {
     }
 
     /// @dev Stores the spend struct.
-    function storeSpend(
-        LibBytes.BytesStorage storage $,
-        TokenPeriodSpend memory spend
-    ) internal {
+    function storeSpend(LibBytes.BytesStorage storage $, TokenPeriodSpend memory spend) internal {
         LibBytes.set($, LibZip.cdCompress(abi.encode(spend)));
     }
 
     /// @dev Loads the spend struct.
-    function loadSpend(
-        LibBytes.BytesStorage storage $
-    ) internal view returns (TokenPeriodSpend memory spend) {
+    function loadSpend(LibBytes.BytesStorage storage $) internal view returns (TokenPeriodSpend memory spend) {
         bytes memory compressed = LibBytes.get($);
         if (compressed.length != 0) {
             bytes memory decoded = LibZip.cdDecompress(compressed);
@@ -789,7 +680,5 @@ library GuardedExecutorLib {
     function _isSuperAdmin(bytes32 keyHash) internal view returns (bool) {}
 
     /// @dev To be overriden to return the storage slot seed for a `keyHash`.
-    function _getGuardedExecutorKeyStorageSeed(
-        bytes32 keyHash
-    ) internal view returns (bytes32) {}
+    function _getGuardedExecutorKeyStorageSeed(bytes32 keyHash) internal view returns (bytes32) {}
 }

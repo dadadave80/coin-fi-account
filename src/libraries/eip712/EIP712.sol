@@ -26,10 +26,7 @@ abstract contract EIP712 is Initializable {
     /// In the case of upgradeable contracts (i.e. proxies),
     /// or if the chain id changes due to a hard fork,
     /// the domain separator will be seamlessly calculated on-the-fly.
-    function __EIP712_Init(
-        string calldata _name,
-        string calldata _version
-    ) internal virtual onlyInitializing {
+    function __EIP712_Init(string calldata _name, string calldata _version) internal virtual onlyInitializing {
         EIP712Lib.eip712Init(_name, _version);
     }
 
@@ -48,12 +45,7 @@ abstract contract EIP712 is Initializable {
     ///
     /// Note: If the returned result may change after the contract has been deployed,
     /// you must override `_domainNameAndVersionMayChange()` to return true.
-    function _domainNameAndVersion()
-        internal
-        view
-        virtual
-        returns (string memory name, string memory version)
-    {
+    function _domainNameAndVersion() internal view virtual returns (string memory name, string memory version) {
         EIP712Lib.domainNameAndVersion();
     }
 
@@ -62,12 +54,7 @@ abstract contract EIP712 is Initializable {
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Returns the EIP-712 domain separator.
-    function _domainSeparator()
-        internal
-        view
-        virtual
-        returns (bytes32 separator)
-    {
+    function _domainSeparator() internal view virtual returns (bytes32 separator) {
         EIP712Lib.domainSeparator();
     }
 
@@ -84,34 +71,30 @@ abstract contract EIP712 is Initializable {
     ///     )));
     ///     address signer = ECDSA.recover(digest, signature);
     /// ```
-    function _hashTypedData(
-        bytes32 _structHash
-    ) internal view virtual returns (bytes32) {
+    function _hashTypedData(bytes32 _structHash) internal view virtual returns (bytes32) {
         return EIP712Lib.hashTypedData(_structHash);
     }
 
     /// @dev Variant of `_hashTypedData` that excludes the chain ID.
     /// Included for the niche use case of cross-chain workflows.
-    function _hashTypedDataSansChainId(
-        bytes32 _structHash
-    ) internal view virtual returns (bytes32) {
+    function _hashTypedDataSansChainId(bytes32 _structHash) internal view virtual returns (bytes32) {
         return EIP712Lib.hashTypedDataSansChainId(_structHash);
     }
 
     /// @dev Variant of `_hashTypedData` that excludes the chain ID and verifying contract.
     /// Included for the niche use case of cross-chain and multi-verifier workflows.
-    function _hashTypedDataSansChainIdAndVerifyingContract(
-        bytes32 _structHash
-    ) internal view virtual returns (bytes32) {
-        return
-            EIP712Lib.hashTypedDataSansChainIdAndVerifyingContract(_structHash);
+    function _hashTypedDataSansChainIdAndVerifyingContract(bytes32 _structHash)
+        internal
+        view
+        virtual
+        returns (bytes32)
+    {
+        return EIP712Lib.hashTypedDataSansChainIdAndVerifyingContract(_structHash);
     }
 
     /// @dev Variant of `_hashTypedData` that excludes the chain ID and verifying contract.
     /// Included for the niche use case of multi-verifier workflows.
-    function _hashTypedDataSansVerifyingContract(
-        bytes32 _structHash
-    ) internal view virtual returns (bytes32) {
+    function _hashTypedDataSansVerifyingContract(bytes32 _structHash) internal view virtual returns (bytes32) {
         return EIP712Lib.hashTypedDataSansVerifyingContract(_structHash);
     }
 
@@ -134,14 +117,6 @@ abstract contract EIP712 is Initializable {
             uint256[] memory extensions_
         )
     {
-        (
-            fields_,
-            name_,
-            version_,
-            chainId_,
-            verifyingContract_,
-            salt_,
-            extensions_
-        ) = EIP712Lib.eip712Domain();
+        (fields_, name_, version_, chainId_, verifyingContract_, salt_, extensions_) = EIP712Lib.eip712Domain();
     }
 }

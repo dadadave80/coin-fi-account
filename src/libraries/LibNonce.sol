@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {LibBit} from "solady/utils/LibBit.sol";
 import {LibStorage} from "solady/utils/LibStorage.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 /// @title LibNonce
 /// @notice Helper library for ERC4337 style 2D nonces.
@@ -23,11 +23,7 @@ library LibNonce {
     ////////////////////////////////////////////////////////////////////////
 
     /// @dev Return current nonce with sequence key.
-    function get(mapping(uint192 => LibStorage.Ref) storage seqMap, uint192 seqKey)
-        internal
-        view
-        returns (uint256)
-    {
+    function get(mapping(uint192 => LibStorage.Ref) storage seqMap, uint192 seqKey) internal view returns (uint256) {
         return seqMap[seqKey].value | (uint256(seqKey) << 64);
     }
 
@@ -51,9 +47,7 @@ library LibNonce {
     }
 
     /// @dev Checks and increment the nonce.
-    function checkAndIncrement(mapping(uint192 => LibStorage.Ref) storage seqMap, uint256 nonce)
-        internal
-    {
+    function checkAndIncrement(mapping(uint192 => LibStorage.Ref) storage seqMap, uint256 nonce) internal {
         (LibStorage.Ref storage s, uint256 seq) = check(seqMap, nonce);
         unchecked {
             s.value = seq + 1;
