@@ -24,7 +24,7 @@ abstract contract EIP712 is Initializable {
     /// In the case of upgradeable contracts (i.e. proxies),
     /// or if the chain id changes due to a hard fork,
     /// the domain separator will be seamlessly calculated on-the-fly.
-    function __EIP712_Init(string calldata _name, string calldata _version) internal virtual onlyInitializing {
+    function __EIP712_init(string calldata _name, string calldata _version) internal virtual onlyInitializing {
         EIP712Lib.eip712Init(_name, _version);
     }
 
