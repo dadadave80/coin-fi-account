@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 //*//////////////////////////////////////////////////////////////////////////
 //                             DIAMOND CUT EVENT
@@ -348,6 +348,20 @@ library LibDiamond {
 
     function facetToPosition(DiamondStorage storage _ds, address _facetAddress) internal view returns (uint256) {
         return _ds.facetToSelectorsAndPosition[_facetAddress].facetAddressPosition;
+    }
+
+    function facets(DiamondStorage storage _ds) internal view returns (Facet[] memory facets_) {
+        uint256 facetCount = _ds.facetAddresses.length;
+        facets_ = new Facet[](facetCount);
+        for (uint256 i; i < facetCount; ++i) {
+            address facetAddr = _ds.facetAddresses[i];
+            facets_[i].facetAddress = facetAddr;
+            facets_[i].functionSelectors = facetToSelectors(_ds, facetAddr);
+        }
+    }
+
+    function facets() internal view returns (Facet[] memory) {
+        return facets(diamondStorage());
     }
 
     //*//////////////////////////////////////////////////////////////////////////
