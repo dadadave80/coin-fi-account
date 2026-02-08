@@ -16,8 +16,6 @@ import {Initializable} from "solady/utils/Initializable.sol";
 /// This is for simplicity and to save gas.
 /// If you need to customize, please fork / modify accordingly.
 abstract contract EIP712 is Initializable {
-    using EIP712Lib for *;
-
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                        CONSTRUCTOR                         */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
