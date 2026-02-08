@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {AccountLib, Call, Key, Unauthorized} from "./AccountLib.sol";
 import {EIP712Lib} from "@coinfi-account-lib//eip712/EIP712Lib.sol";
 import {EIP712} from "@coinfi-account-lib/eip712/EIP712.sol";
-import {GuardedExecutor} from "@coinfi-account-lib/guardedexecutor/GuardedExecutor.sol";
+import {GuardedExecutor} from "@coinfi-account-lib/guardedExecutor/GuardedExecutor.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 
 /// @title AccountBase
