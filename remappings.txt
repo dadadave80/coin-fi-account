@@ -1,12 +1,5 @@
 @coinfi-account/=src/
 @coinfi-account-lib/=src/libraries/
 @coinfi-account-diamond/=src/libraries/diamond/
-@diamond-errors/=lib/diamond-lib/src/libraries/errors/
-@diamond-logs/=lib/diamond-lib/src/libraries/logs/
-@diamond-script/=lib/diamond-lib/script/
-@diamond-storage/=lib/diamond-lib/src/libraries/storage/
-@diamond-test/=lib/diamond-lib/test/
-@diamond/=lib/diamond-lib/src/
-diamond-lib/=lib/diamond-lib/
 forge-std/=lib/forge-std/src/
 solady/=lib/solady/src/
